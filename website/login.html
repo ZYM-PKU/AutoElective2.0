@@ -1,0 +1,84 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0"/>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge;chrome=1" />
+<link rel="stylesheet" type="text/css" href="./resources/css/login.css" />
+<link href="./resources/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+<script type="text/javascript">
+	var redirectURL = "https://portal.pku.edu.cn/portal2017/ssoLogin.do";
+	var redirectLogonURL = "null";	
+	
+</script>
+<link rel="stylesheet" type="text/css" href="./resources/css/login.css" />
+<script type="text/javascript" src="./resources/javascript/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="./resources/javascript/OAuthLogin.js"></script>
+<title>北京大学统一身份认证</title>
+</head>
+<body onload="focusName()">
+   <div class="main">
+      <div class="top"><a href="http://www.pku.edu.cn"><img src="./resources/images/pku_logo_red.png"/></a></div>
+      <div class="mid">
+	      <!-- <div id="left" onclick="changeViewImg()"></div> -->
+	      <form method="post" onsubmit="return false;">
+	      <div class="single_col_panel">
+	             <div class="row">
+		            <input class="input-txt-row" type="text" tabIndex = "1" id="user_name" name="userName" placeholder="学号/职工号/北大邮箱/手机号" onFocus="focusUserName()" onblur='leaveUserName()' onKeyDown="enterPassword(event)" onChange="showOrHideSmsCode()"/>
+		         	<a href="javascript:void(0)" class="i-clear" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		         </div>
+	            <div id="passwd_area" class="row">
+	            	<!-- 原来采用text和password切换的方式，但无法实现自动填写密码 -->
+		        	<input class="input-txt-row input-txt-pad"  type="password" tabIndex = "2"  id="password" name="password"  placeholder="密码" onFocus="focusPassword()" onblur='leavePassword()' onKeyDown="enterSMSCode(event)" />
+		            <a href="javascript:void(0)" class="i-clear i-clear-pad" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            <a href="/iaaa/resources/help/findPwd.html" target='_blank' class="pad-tip">忘记密码</a>
+		         </div>
+		         <div id="sms_area" class="row" style="display:none;">
+		            <input class="input-txt-half-row" type="number" pattern="[0-9]*" tabIndex = "3"  id="sms_code" name="sms_code" placeholder="短信验证码" onFocus="focusSMSCode()" onblur="leaveSMSCode()" onKeyDown="enterCode(event)" />
+		            <a href="javascript:void(0)" class="i-clear i-clear-half" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            <input class="input-btn-half-row" type="button" id="sms_button" onclick="sendSMSCode()" value="获取短信验证码"/>
+		         </div>
+		         <div id="otp_area" class="row" style="display:none;">
+		        	  <input class="input-txt-row input-txt-pad"  type="number" pattern="[0-9]*" tabIndex = "4"  id="otp_code" name="otp_code" placeholder="手机令牌" onFocus="focusOTPCode()" onblur="leaveOTPCode()" onKeyDown="enterCode(event)" />
+		              <a href="javascript:void(0)" class="i-clear i-clear-pad" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		              <a href="/iaaa/resources/help/otpHelp.html" target='_blank' class="pad-tip">使用说明</a>
+		         </div>
+		         <div id="code_area" class="row" style="display:none;">
+		            <div class="row_66">
+		            	<input class="input-txt-row input-txt-pad2" type="text" tabIndex = "5"  id="valid_code" name="validCode" placeholder="验证码" onFocus="focusCode()" onblur="leaveCode()" onKeyDown="enterKey(event)"  />
+		            	<a href="javascript:void(0)" class="i-clear i-clear-pad2" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            	<a href="javascript:changeCode()" id="change_code" class="pad-tip">换一张</a>
+		            </div>
+		            <div class="row_34">
+		            	<img id="code_img" src="/iaaa/servlet/DrawServlet?Rand="+Math.random()>
+		            </div>
+		         </div>
+		         <div class="row-thin">
+		         	<input type="checkbox" id="remember_check"/><div id="remember_text" onclick="clickCheck()"><i class="fa fa-square-o i-check"></i> 记住账号</div>
+		         </div>
+		         <div class="row-thin">
+		            <span id="msg"></span>
+		         </div>
+		         <div class="row">
+		            <input type="hidden" id="appid" value="portal2017">
+		            <input class="input-btn-row" type="button" id="otp_button" onclick="gotoOTPBind()" value="绑定App" style="display:none;"/>
+		            <input type="submit" class="input-btn-row" id="logon_button" onclick="oauthLogon()" value="登录"/>
+		            
+		            
+		         </div>
+	      </div>
+	      </form>
+	  </div>
+      <div class="bottom">
+         <!--<img src="./resources/images/bdxxfw.jpg" width="86"/>
+      	--><div class="lx_info">
+         	<span>服务热线：010-62751023</span>
+            <span>Email：<a href="mailto:its@pku.edu.cn">its@pku.edu.cn</a></span>
+        	<span>© <a href="http://cc.pku.edu.cn/">北京大学计算中心</a></span>
+        </div>
+      </div>
+   </div>
+</body>
+<script type="text/javascript" src="./resources/javascript/LoginEn.js"></script>
+</html>
