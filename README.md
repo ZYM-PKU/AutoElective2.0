@@ -15,7 +15,7 @@
 # 使用方法
 
 ## 1.环境配置
-*首先要保证shell运行在项目根目录下，且已经安装Chrome浏览器。
+<font color=#DC143C>首先要保证shell运行在项目根目录下，且已经安装Chrome浏览器。</font>
 ### (1)安装[python3](https://www.python.org/)
 ### (2)安装[Pytorch](https://pytorch.org/)
 推荐选项：
