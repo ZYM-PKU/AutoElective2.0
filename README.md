@@ -1,4 +1,5 @@
 # AutoElective2.0
+
 <font color=#999AAA >基于Web自动化测试与卷积神经网络自主开发的可视化选课应用
 </font>
 
@@ -18,6 +19,7 @@
 <font color=#DC143C>首先要保证shell运行在项目根目录下，且已经安装Chrome浏览器。</font>
 ### (1)安装[python3](https://www.python.org/)
 ### (2)安装[Pytorch](https://pytorch.org/)
+从 PyTorch 官网 中选择合适的条件获得下载命令，然后复制粘贴到命令行中运行即可下载安装。
 推荐选项：
 
 - `PyTorch Build`:  Stable (1.6.0)
