@@ -53,6 +53,9 @@ python gui.py
 ├── model            // 训练好的模型
 ├── paper             // 参考文献
 ├── qt            // 界面相关文件
+    ├── ui            //界面定义
+    ├── pics          //界面图文
+    └── save          //用户信息缓存
 ├── show            // 图文材料
 ├── website            // 官网源代码
 ├── AutoElective.py         // 主程序
