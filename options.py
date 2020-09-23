@@ -22,6 +22,9 @@ class IM(Enum):  # ICR识别方式
 class ERROR(Enum):  # 错误信息
     EMAIL_ERROR = 0
     DRIVER_ERROR = 1
+    INTERNET_ERROR = 2
+    REFRESH_ERROR = 3
+    VALID_CODE_ERROR = 4
 
 
 class STATE(Enum):  # 运行状态

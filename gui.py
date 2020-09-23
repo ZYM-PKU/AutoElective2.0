@@ -11,6 +11,7 @@
 
 import os
 import sys
+import time
 import shelve
 from PyQt5.uic import *
 from PyQt5.QtGui import *
@@ -21,6 +22,8 @@ from PyQt5.QtCore import pyqtSignal, QObject
 
 from AutoElec import *
 from threading import Thread
+from thread_control import stop_thread
+
 
 PATH = os.path.dirname(__file__)
 
@@ -41,11 +44,13 @@ icr_method = IM.CNN
 
 
 class MySignal(QObject):
+    '''前后端信号传递'''
     print_text = pyqtSignal(str)
     error_message = pyqtSignal(ERROR)
 
 
 class Loginwindow(QWidget):
+    '''登录界面'''
     def __init__(self):
         super().__init__()
         loadUi(os.path.join(PATH, "qt/ui/login.ui"), self)  # 加载UI文件
@@ -71,7 +76,7 @@ class Loginwindow(QWidget):
         except:
             return
     def closeEvent(self, event):
-        """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主进程"""
+        """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主线程"""
         if not self.continued: sys.exit(0)
 
 
@@ -178,9 +183,11 @@ class Loginwindow(QWidget):
 
 
 class Mainwindow(QMainWindow):
+    '''主界面'''
     def __init__(self):
         super().__init__()
         loadUi(os.path.join(PATH, "qt/ui/mainwindow.ui"), self)  # 加载UI文件
+
         #初始化选课工具  
         self.ms = MySignal()#前后台信号传输
         self.ET = Electool(self,targets,user_id,user_password,user_driver,sound_reminder,email_reminder,login_method,refresh_frequency,icr_permitted,icr_method,self.ms)
@@ -194,25 +201,26 @@ class Mainwindow(QMainWindow):
         self.stopbutton.clicked.connect(self.stop)
 
 
-        #新建界面进程，控制界面变化
+        #界面线程，控制界面变化
         self.window_thread=Thread(target=self.window_refresh)
         self.window_thread.setDaemon(True)
         self.window_thread.start()
-        self.ET.run()
+
+
+        #主线程
+        self.mainthread=Thread(target=self.ET.run)
+        self.mainthread.setDaemon(True)
+        self.mainthread.start()
+
 
     def closeEvent(self, event):
-        """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主进程"""
-        print('exit')
-        try:
-            self.ET.terminate_thread()
-        except:
-            pass
-        try:
-            stop_thread(self.ET.control_thread)
-        except:
-            pass
+        """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主线程"""
+        reply = QMessageBox.question(self, 'EXIT', '确认退出吗？', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            sys.exit(0)
+        else:
+            event.ignore()
 
-        sys.exit(0)
 
 
 
@@ -224,26 +232,9 @@ class Mainwindow(QMainWindow):
             self.etable.setItem(i, 0, item)
         
         self.statelabel.setText("正在启动...")
-        self.frequencylabel.setText(f"{refresh_frequency} s")
+        self.frequencylabel.setText(f"{round(self.ET.refresh_speed,3)}s  (+{refresh_frequency}s)")
         self.ET.state=STATE.LOADING
 
-
-    def window_refresh(self):
-        while(1):
-            #时间栏
-            self.timelabel.setText(self.ET.gettime())
-
-            #状态栏
-            if self.ET.state==STATE.LOADING:self.statelabel.setText("加载中...")
-            elif self.ET.state==STATE.INITIALIZING:self.statelabel.setText("初始化...")
-            elif self.ET.state==STATE.CONNECTING:self.statelabel.setText("尝试连接...")
-            elif self.ET.state==STATE.LOGINING:self.statelabel.setText("正在登录...")
-            elif self.ET.state==STATE.JUMPING:self.statelabel.setText("正在跳转...")
-            elif self.ET.state==STATE.REFRESHING:self.statelabel.setText("自动刷新监控中...")
-            elif self.ET.state==STATE.SNATCHING:self.statelabel.setText("正在抓取名额...")
-            elif self.ET.state==STATE.ERROR:self.statelabel.setText("系统异常")
-            elif self.ET.state==STATE.RESTARTING:self.statelabel.setText("正在尝试重启...")
-            elif self.ET.state==STATE.STOPPED:self.statelabel.setText("系统中断")
 
     def change_method(self):
         global icr_method
@@ -257,7 +248,7 @@ class Mainwindow(QMainWindow):
                 QPixmap(os.path.join(PATH, "qt/pics/ocr.jpg")))
 
     def printinfo(self, text):
-        '''在文本输出框打印当前进程'''
+        '''在文本输出框打印当前线程'''
         if self.ET.state not in (STATE.STOPPED,STATE.RESTARTING):
             self.infobox.append(text)
             self.infobox.ensureCursorVisible()
@@ -265,15 +256,85 @@ class Mainwindow(QMainWindow):
     def error_handler(self,e):
         '''错误处理'''
         self.ET.state=STATE.ERROR
+
         if e==ERROR.EMAIL_ERROR:
-            self.infobox.append("邮箱信息有误,初始化失败，邮件提醒已自动关闭")
+            msg_box = QMessageBox(QMessageBox.Warning, '错误', '邮箱信息错误或不完整！已关闭邮件提醒功能。')
+            msg_box.exec_()
+
+        elif e==ERROR.DRIVER_ERROR:
+            msg_box = QMessageBox(QMessageBox.Warning, '错误', '浏览器驱动出错！请检查驱动地址。')
+            msg_box.exec_()
+            sys.exit(0)
+
+        else:
+            self.pr("\n尝试重启进程...\n")
+            self.restart_thread()
+
+
+
+    def window_refresh(self):
+        '''窗口线程'''
+        while(1):
+            #时间栏
+            self.timelabel.setText(self.ET.gettime())
+            #速率栏
+            self.frequencylabel.setText(f"{round(self.ET.refresh_speed,3)}s  (+{refresh_frequency}s)")
+
+            #状态栏
+            if self.ET.state==STATE.LOADING:self.statelabel.setText("加载中...")
+            elif self.ET.state==STATE.INITIALIZING:self.statelabel.setText("初始化...")
+            elif self.ET.state==STATE.CONNECTING:self.statelabel.setText("尝试连接...")
+            elif self.ET.state==STATE.LOGINING:self.statelabel.setText("正在登录...")
+            elif self.ET.state==STATE.JUMPING:self.statelabel.setText("正在跳转...")
+            elif self.ET.state==STATE.REFRESHING:self.statelabel.setText("自动刷新监控中...")
+            elif self.ET.state==STATE.SNATCHING:self.statelabel.setText("正在抓取名额...")
+            elif self.ET.state==STATE.ERROR:self.statelabel.setText("系统异常")
+            elif self.ET.state==STATE.RESTARTING:self.statelabel.setText("正在尝试重启...")
+            elif self.ET.state==STATE.STOPPED:self.statelabel.setText("系统中断")
+
+
+    #重启进程
+    def restart_thread(self):
+        self.ET.state=STATE.RESTARTING
+        self.infobox.append("\n######尝试重启进程...######")
+        self.infobox.ensureCursorVisible()
+        try:
+            self.ET.browser.quit()
+        except:
+            pass
+        try:
+            stop_thread(self.mainthread)
+        except:
+            pass
+
+        self.mainthread=Thread(target=self.ET.run)
+        self.mainthread.setDaemon(True)
+        self.mainthread.start()
+
+
+    #停止进程
+    def terminate_thread(self):
+        self.ET.state=STATE.STOPPED
+
+        self.infobox.append("\n######进程已终止.######")
+        self.infobox.ensureCursorVisible()
+        try:
+            self.ET.browser.quit()
+        except:
+            pass
+        try:
+            stop_thread(self.mainthread)
+        except:
+            pass
+
+
 
     def restart(self):
-        self.ET.restart_thread()
+        self.restart_thread()
         self.stopbutton.setEnabled(True)
 
     def stop(self):
-        self.ET.terminate_thread()
+        self.terminate_thread()
         self.stopbutton.setEnabled(False)
 
 
