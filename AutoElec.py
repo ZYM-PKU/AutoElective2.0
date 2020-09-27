@@ -5,41 +5,39 @@
 import os
 import sys
 import time
-import argparse
-import selenium
+import ctypes#声音报警提示
+import smtplib#发送email
 
 
 
-
-from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select#选择框处理
 from selenium.webdriver.common.action_chains import ActionChains#精细动作
+from selenium.webdriver import Chrome, Edge,Firefox,Ie,ChromeOptions
 
 
-from datetime import datetime
+
 from options import *
-from PIL import Image
-
-import ctypes#报警提示
-import smtplib#发送email
-from email.mime.text import MIMEText
 from threading import Thread
-from pretreatment import ICR
+from datetime import datetime
+from pretreatment import recognize
+from email.mime.text import MIMEText
 
 
 PATH = os.path.dirname(__file__)
 
 
 
-
 class Electool():
     '''自动选课功能类'''
-    def __init__(self,window,targets,studentid,password,driverpath,sound_reminder,email_reminder,login_method,frequency,icr_permitted,icr_method,ms):
+    def __init__(self,window,targets,studentid,password,driver_choice,driverpath,sound_reminder,email_reminder,login_method,frequency,icr_permitted,icr_method,ms):
+        
+        self.ms=ms
         self.window=window
         self.targets = targets
         self.studentid = studentid
         self.password = password
+        self.driver_choice = driver_choice
         self.driverpath = driverpath
         self.sound_reminder = sound_reminder
         self.email_reminder =email_reminder
@@ -47,31 +45,33 @@ class Electool():
         self.frequency = frequency
         self.icr_permitted = icr_permitted
         self.icr_method = icr_method
-        self.ms=ms
-        self.state=STATE.INITIALIZING
         self.player = ctypes.windll.kernel32
 
-        
+        self.state=STATE.INITIALIZING
         self.closed=False
         self.refresh_speed=0
-        self.refresh_count=1
+        self.refresh_count=0
         self.search_table=[]#查找表
         self.examined=False#是否经过首次查找
+
     
 
     def run(self):
+
+        self.state=STATE.INITIALIZING
         self.closed=False
         self.refresh_speed=0
         self.refresh_count=1
         self.search_table=[]#查找表
         self.examined=False#是否经过首次查找
-        self.pr("########################################")
-        self.pr("----------------------------------------")
-        self.pr("  北京大学学生自动刷课提醒系统   v2.1.0")
+
+        self.pr("##########################")
+        self.pr("-------------------------------------------------")
+        self.pr("  北京大学学生课程补退选自动刷新提示系统   v2.1.0")
         self.pr("           版本号：v2.1.0")
         self.pr("            开发者：YM-Z")
-        self.pr("----------------------------------------")
-        self.pr("########################################")
+        self.pr("-------------------------------------------------")
+        self.pr("##########################")
         self.pr()
         self.pr("欢迎使用！")
         self.pr()
@@ -80,9 +80,9 @@ class Electool():
 
         if self.email_reminder:
             self.emailinit()
+        if self.email_reminder:
             self.sendemails('INITIALIZATION','事件提醒：   系统成功启动或重启')
         
-
         self.main()
 
 
@@ -96,6 +96,10 @@ class Electool():
     def pe(self,e):
         '''发送错误信息'''
         self.ms.error_message.emit(e)
+
+    def pm(self,path):
+        '''发送图片路径'''
+        self.ms.show_image.emit(path)
 
 
 
@@ -124,12 +128,13 @@ class Electool():
         except:
             self.email_reminder=False
             self.pe(ERROR.EMAIL_ERROR)
+            time.sleep(2)
 
     #发送邮件提醒
     def sendemails(self,subject,contains):
 
         try:
-            mail = MIMEText('#学生补退选自动刷新提示系统 - v2.1.0# \n'+'系统时间：'+self.gettime()+'\n'+contains)
+            mail = MIMEText('#北京大学学生课程补退选自动刷新提示系统 - v2.1.0# \n'+'系统时间：'+self.gettime()+'\n'+contains)
             mail['Subject'] = subject
             mail['From'] = self.username_send 
             mail['To'] = self.username_send
@@ -140,13 +145,14 @@ class Electool():
         except:
             self.email_reminder=False
             self.pe(ERROR.EMAIL_ERROR)
+            time.sleep(2)
 
 
     def noise(self):
         #声音警报
         tic=time.time()
         self.player.Beep(1000,3000)
-        while(True):
+        while True:
             player.Beep(1500,1000)#设置声音提醒（频率，持续时长（ms））
             toc=time.time()
             if toc-tic>=30: return
@@ -171,11 +177,11 @@ class Electool():
         self.state=STATE.CONNECTING
         self.pr("尝试连接到服务器...\n")
 
-        URL_1="https://portal.pku.edu.cn/"
-        URL_2="https://elective.pku.edu.cn/"
-        #直接进入身份验证系统
+        URL_1="https://portal.pku.edu.cn/"#门户
+        URL_2="https://elective.pku.edu.cn/"#选课网
+        
 
-        while(True):
+        while True:
             try:
                 if self.login_method==LM.PORTAL:
                     self.pr("正在通过门户进入选课系统...")
@@ -195,25 +201,23 @@ class Electool():
                 return
 
             except:
-                self.pr("[ERROR]*检测到网络错误*   时间："+self.gettime())           
-
+                self.pr("[ERROR]*检测到网络错误*   时间："+self.gettime())   
+                self.pr("尝试更换登录方式...\n")        
                 self.login_method=LM.PORTAL if self.login_method==LM.ELECTIVE else LM.ELECTIVE
                 if self.state not in (STATE.RESTARTING,STATE.STOPPED):
                     self.pe(ERROR.INTERNET_ERROR)
-                    while(1):time.sleep(1)
+                    while True:time.sleep(1)
 
     #自动登录
     def login(self):
 
         self.state=STATE.LOGINING
         self.pr("尝试登录...\n")
-        while(True):
+        while True:
             try:
-                #获取并点击“登录”按钮
+
                 self.pr("抓取账户接口...")
-                #选择网页元素，返回一个WebElement对象
                 usernameinput=self.browser.find_element_by_id("user_name")
-                #id是一个网页元素相对唯一的属性，通过id选择元素是最常用的方式
                 self.pr("抓取安全接口...")
                 passwordinput=self.browser.find_element_by_id("password")
 
@@ -241,12 +245,9 @@ class Electool():
     #进入选课界面
     def jump_to_elective(self):
 
-        time.sleep(1)
         self.state=STATE.JUMPING
 
-
-        #获取并点击“选课”按钮
-        while(True):
+        while True:
             try:
                 #找到选课按钮
                 elective_button=self.browser.find_element_by_id("fav_elective")
@@ -267,7 +268,7 @@ class Electool():
                             self.pr("[ERROR]*检测到网络错误*   时间："+self.gettime())
                             self.pr('尝试更换登录方式...\n')
 
-                            self.login_method=LM.PORTAL if self.login_method==LM.ELECTIVE else LM.ELECTIVE
+                            self.login_method=LM.ELECTIVE
                             self.pe(ERROR.INTERNET_ERROR)
                             while 1:time.sleep(1)
 
@@ -275,10 +276,10 @@ class Electool():
                 if self.state not in (STATE.RESTARTING,STATE.STOPPED):
                     self.pr("载入失败")
                     self.pr("*检测到网络错误*   时间："+self.gettime())
-                    self.pr('尝试重新加载...\n')
+                    self.pr('尝试更换登录方式...\n')
                     
 
-                    if self.login_method==LM.PORTAL: self.login_method=LM.ELECTIVE 
+                    self.login_method=LM.ELECTIVE 
                     self.pe(ERROR.INTERNET_ERROR)
                     while 1:time.sleep(1)
 
@@ -289,34 +290,34 @@ class Electool():
         self.state=STATE.JUMPING
 
         #获取并点击“补退选/补选”按钮
-        while(True):
+        while True:
             try:
                 add_drop_button=self.browser.find_element_by_link_text('补退选')#根据链接标签文本选择元素（只能选择链接）
                 self.pr("加载完成\n")
                 add_drop_button.click()
-                self.pr("尝试跳转...")
                 self.pr("尝试进入‘补退选’界面...")
+
                 if self.browser.title=="系统异常":
                     self.pr("失败，尝试进入‘补选’界面...")
                     add_button=self.browser.find_element_by_link_text('补  选')#补选中间有两个空格
                     add_button.click()
+
                 if self.browser.title=="系统异常":
                     if self.state not in (STATE.RESTARTING,STATE.STOPPED):
-
                         self.pr("\n错误，无法进入补选/补退选界面...")
                         self.pr("[ERROR]*检测到网络错误*   时间："+self.gettime())
-
                         self.pe(ERROR.INTERNET_ERROR)
                         while 1:time.sleep(1)
                 
                 return
+
             except:
 
                 if self.state not in (STATE.RESTARTING,STATE.STOPPED):
 
                     self.pr("载入失败")
                     self.pr("[ERROR]*检测到网络错误*   时间："+self.gettime())
-                    
+                    self.pr('尝试更换登录方式...\n')
                     self.login_method=LM.PORTAL if self.login_method==LM.ELECTIVE else LM.ELECTIVE
                     self.pe(ERROR.INTERNET_ERROR)
                     while 1:time.sleep(1)
@@ -324,13 +325,17 @@ class Electool():
 
 
     #自动抢课（核心代码）
-    def snatch(self,status_id):
+    def snatch(self,status_id,target,class_id):
+
+        if self.state==STATE.SNATCHING:return #多线程堵塞
+        self.pr(f"\n已发现{target}  班号：{class_id} 有空余名额！  开始自动抢课...")
 
         self.state=STATE.SNATCHING
         while True:
 
             captcha_input=self.browser.find_element_by_xpath("//input[@id='validCode']")#验证码输入框
             captcha_change=self.browser.find_element_by_link_text("换一个")#更换验证码按钮
+            
 
             ###获取验证码
             self.pr("尝试获取验证码...")
@@ -345,25 +350,29 @@ class Electool():
             #分析原因为后端服务器有验证码随机生成函数，该函数接收url中的rand参数作为种子构造随机图片，rand与图片无一一对应关系
             #因此，每次以相同的rand向服务器发送GET请求都会得到不同的验证码图片
             #综上，我们采用截图的方式直接获取已经加载到网页前端的验证码
-            
 
+            self.pm(img_path)
+            
             ###识别验证码
             self.pr("验证码已获取.   尝试识别...")
-            result=""
-            icr=ICR(img_path)#初始化识别模组
+            tic=time.time()
+
             try:
-                result=icr.ToText()#调用cnn识别方法将图片转换为字符串
+                result=recognize(img_path,self.icr_method)
             except:
-                self.pr("[ERROR]验证码图片损坏，正在强制重启进程...")#验证码损坏时刷新页面无效
-                if self.email_reminder: 
-                    self.sendemails('ERROR','错误： 验证码图片损坏\n系统正在尝试重启...')
+                self.pr("验证码图片损毁，正在强制重启...")
                 if self.state not in (STATE.RESTARTING,STATE.STOPPED):
                     self.pe(ERROR.VALID_CODE_ERROR)
-                    while(1):time.sleep(1)
+                    while True:time.sleep(1)
 
+            toc=time.time()
+            self.pr(f"Recognize function called.  Time cost: {toc-tic}s\n")
             
+
+            ###填入验证码
+            self.window.coderesult.setText(result)     
             captcha_input.send_keys(result)
-            self.pr("已填入识别结果： {result}")
+            self.pr(f"已填入识别结果： {result}")
             
             ###点击补选按钮，确认补选
             status=self.browser.find_element_by_id(status_id)
@@ -372,7 +381,7 @@ class Electool():
             add_button=row.find_element_by_xpath("./td[last()]//span")#找到补选按钮
             add_button.click()
 
-            #读取弹出框信息
+            ###读取弹出框信息
             info=self.browser.switch_to.alert.text
             self.pr(f"\nGET RESPONSE:\n{info}\n")
 
@@ -385,30 +394,28 @@ class Electool():
             self.browser.switch_to.alert.accept()#点击弹出框的确定
             self.examined=False#重新检索其他课程
 
-            #验证成功信息：
+            ###验证成功信息：
             try:
-                success_info_box=self.browser.find_element_by_xpath("//*[@id='msgTips']/table/tbody/tr/td/table/tbody/tr/td[2]")#查找提示信息
-                success_info=success_info_box.text
-                if "成功" in success_info:
-                    self.pr(f"\n成功补选{target}！\n[INFO]:{success_info}\n重启监控进程...")
+                message_box=self.browser.find_element_by_xpath("//*[@id='msgTips']/table/tbody/tr/td/table/tbody/tr/td[2]")#查找提示信息
+                message=message_box.text
+                if "成功" in message:
+                    self.pr(f"\n成功补选{target}！\n[INFO]:{message}\n重启监控进程...")
                     if self.email_reminder:
-                        self.sendemails('SUCCESS!',f"成功补选{target}！\nINFO:{success_info}")
-                
+                        self.sendemails('SUCCESS!',f"成功补选{target}！\nINFO:{message}")
                 else:
-                    self.pr(f"\n补选{target}失败...\n[INFO]:{success_info}\n重启监控进程...")
+                    self.pr(f"\n补选{target}失败...\n[INFO]:{message}\n重启监控进程...")
                     if self.email_reminder:
-                        self.sendemails('FAILED',f"补选{target}失败\nINFO:{success_info}")
+                        self.sendemails('FAILED',f"补选{target}失败\nINFO:{message}")
                     self.browser.refresh()
                     return
             except:
                 self.pr(f"\n补选{target}失败...  \n重启监控进程...")
                 if self.email_reminder:
-                    self.sendemails('FAILED',f"补选{target}失败\n[INFO]:{success_info}")
+                    self.sendemails('FAILED',f"补选{target}失败\n[INFO]:{message}")
                 self.browser.refresh()
                 return
 
             return
-
 
 
     #检测名额部分（核心代码）
@@ -453,11 +460,11 @@ class Electool():
             if self.state!=STATE.SNATCHING:self.pr("课程: "+target+"  班号："+class_id+"        目前情况: "+str(total)+"/"+str(occupied))
 
 
-            if occupied<total and occupied!=0 : 
-                self.state=STATE.SNATCHING
-                self.pr("\n已发现{target}有空余名额！  开始自动抢课...")
+            if occupied<total and occupied!=0 :                
                 self.reminder(target,occupied,total)#发送通知
-                self.snatch(status_id)#抢夺课程
+                if not self.icr_permitted:time.sleep(60)#阻止过于频繁的邮件提醒
+                if self.icr_permitted: 
+                    self.snatch(status_id,target,class_id)#抢夺课程
                 return#重新加载窗口
                 
         except:
@@ -481,21 +488,24 @@ class Electool():
     #循环刷新部分
     def refresh(self):
         
-        self.state=STATE.REFRESHING
+        self.pr("加载完成\n")
         self.pr("开始循环刷新...")
-        while(True):
+        while True:
 
             try:
                 if "补选" not in self.browser.title:
                     raise Exception("System Error")
                 if not self.examined:
+                    self.state=STATE.EXAMINING
                     self.examine()#检查   
                     self.pr("----------------------------------------------------")
                     self.pr("\n已开启快速查找.\n")
                 else:
+                    self.state=STATE.REFRESHING
                     tic=time.time()
                     self.pr(f"------------------课程总数：{len(self.search_table)}------------------")
                     self.search()#查找
+                    time.sleep(self.frequency)#刷新延迟
                     toc=time.time()
                     self.refresh_speed=toc-tic     
             except:
@@ -505,11 +515,10 @@ class Electool():
                     self.sendemails('ERROR','错误： 检测到刷新过程中的系统异常        \n目前刷新次数：'+str(self.refresh_count)+'\n系统正在尝试重启...')
                 if self.state not in (STATE.RESTARTING,STATE.STOPPED):
                     self.pe(ERROR.REFRESH_ERROR)
-                    while(1):time.sleep(1)
+                    while True:time.sleep(1)
             else:
                 self.browser.refresh()#刷新
                 self.pr("\n系统时间:  "+self.gettime()+"  刷新次数： "+str(self.refresh_count)+"次\n")
-                time.sleep(self.frequency)#刷新延迟
                 self.refresh_count+=1
                 if self.refresh_count%1000==0 and self.email_reminder:#工作报告
                     self.sendemails('REPORT','例行报告： 系统正常运行中\n目前刷新次数：'+str(self.refresh_count)+"次")
@@ -520,18 +529,32 @@ class Electool():
     def main(self):
 
         try:
-            #进入开发者模式，隐藏测试标记
-            #options = ChromeOptions()
-            #options.add_experimental_option('excludeSwitches', ['enable-automation'])
             self.pr("调用浏览器驱动...")
-            self.browser = Chrome(self.driverpath)#生成一个webdriver对象，同时启动浏览器驱动与浏览器本身
-            #使用“chromedrive”连接并操纵chrome浏览器
+            #进入开发者模式，隐藏测试标记
+            chrome_options = ChromeOptions()
+            prefs = {"": ""}
+            prefs["credentials_enable_service"] = False
+            prefs["profile.password_manager_enabled"] = False
+            chrome_options.add_experimental_option("prefs", prefs) #取消保存密码
+            chrome_options.add_experimental_option('useAutomationExtension', False)  # 取消chrome受自动控制提示
+            chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])  # 取消chrome受自动控制提示
+
+
+            if self.driver_choice==DRIVER.CHROME:
+                self.browser = Chrome(self.driverpath,options=chrome_options)#生成一个webdriver对象，同时启动浏览器驱动与浏览器本身
+            elif self.driver_choice==DRIVER.EDGE:
+                self.browser = Edge(self.driverpath)#生成一个webdriver对象，同时启动浏览器驱动与浏览器本身
+            elif self.driver_choice==DRIVER.FIREFOX:
+                self.browser = Firefox(self.driverpath)#生成一个webdriver对象，同时启动浏览器驱动与浏览器本身
+            elif self.driver_choice==DRIVER.IE:
+                self.browser = Ie(self.driverpath)#生成一个webdriver对象，同时启动浏览器驱动与浏览器本身
+
             self.browser.implicitly_wait(10)#隐式等待，每隔半秒查询一次，最多持续10s
-            #AC=ActionChains(browser)#初始化动作族
+            
 
         except:
             self.pe(ERROR.DRIVER_ERROR)
-            while(1):time.sleep(1)
+            while True:time.sleep(1)
 
         self.connect()
 

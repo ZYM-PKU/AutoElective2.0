@@ -8,53 +8,34 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
-from PIL import Image
-from cnn import CNN
-from transfer import encode,decode
+
+from options import *
+from pretreatment import recognize
 from alive_progress import alive_bar
-import pytesseract
 
 
 PATH = os.path.dirname(__file__)
-model_path='model/newcnn10.pth'
-test_set='c:/train/testset'
 
 
-choice='cnn'#识别方式
+
+choice=IM.CNN#识别方式
+test_set='c:/train/test'#测试集
 
 
 def main():
-    global error_count
-    cnn=CNN(test=True).eval()
-    cnn.load_state_dict(torch.load(os.path.join(PATH,model_path)))
+
+    count=0.0#总数
+    correct=0.0#正确识别数
+    print('Start testing...')
 
     paths = glob.glob(test_set+'/*.jpg')
-    count=0.0
-    correct=0.0
-    print('Start testing...')
     with alive_bar(len(paths)) as bar:
-        if choice=='cnn':
-            for path in paths:
-                bar()
-                count+=1
-                name=path.split('\\')[-1].split('.')[0]
-                img = Image.open(path).convert('L')
-                toTensor = transforms.ToTensor()
-                img=toTensor(img).unsqueeze(0)
-                label=decode(cnn(img))
-
-                #print(label+'  '+name)
-
-                if label==name:correct+=1
-        elif choice=='ocr':
-            for path in paths:
-                bar()
-                count+=1
-                name=path.split('\\')[-1].split('.')[0]
-                img = Image.open(path).convert('L')
-                label=pytesseract.image_to_string(img)
-                
-                if label==name:correct+=1
+        for path in paths:
+            bar()
+            count+=1
+            name=path.split('\\')[-1].split('.')[0]
+            label=recognize(path,choice)
+            if label==name:correct+=1
 
     print('Accuracy: '+str((correct/count)*100.0)+'%')
 

@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 PATH = os.path.dirname(__file__)
-cpath=os.path.join(PATH,"characters")#通用字符集
+cpath=os.path.join(PATH,"dataset/characters")#通用字符集
 
 
 
@@ -30,7 +30,7 @@ def generate1():
     #myfont=ImageFont.FreeTypeFont('s8514sys.fon', 30)
     #BitDaylong11(sRB).TTF
     #arial.ttf
-    myfont = ImageFont.truetype('BitDaylong11(sRB).TTF', 30)
+    myfont = ImageFont.truetype('arial.ttf', 30)
     
 
     print('Start generating...')

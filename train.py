@@ -10,6 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
+
+
 from PIL import Image
 from cnn import CNN
 from transfer import encode,decode
@@ -20,7 +22,7 @@ from alive_progress import alive_bar
 train_dir="c:/train/trainset"#训练集
 learning_rate=0.001126#学习率
 iters=200000#迭代次数
-save_dir='model/newcnn10.pth'#模型存储地址          cnn3(loss=0.3),cnn5(loss=0.2),cnn6(loss=0.1)
+save_dir='model/newcnn10.pth'#模型存储地址     cnn3(loss=0.3),cnn5(loss=0.2),cnn6(loss=0.1)
 batch_size=64#打包规模
 n_threads=16#处理线程数
 
@@ -139,8 +141,6 @@ def main():
 
     #定义数据加载器
     dataset = captcha_Dataset(root=train_dir)
-
-    #dataloader = data.DataLoader(dataset, batch_size=1,shuffle=True, num_workers=0,pin_memory=True)
     dataloader = iter(data.DataLoader( dataset, batch_size=batch_size,sampler=RecurrentSampler(dataset), \
         num_workers=n_threads,pin_memory=True))
 

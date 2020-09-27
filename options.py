@@ -33,8 +33,15 @@ class STATE(Enum):  # 运行状态
     CONNECTING = 2
     LOGINING=3
     JUMPING=4
-    REFRESHING = 5
-    SNATCHING = 6
-    ERROR = 7
-    RESTARTING = 8
-    STOPPED = 9
+    EXAMINING = 5
+    REFRESHING = 6
+    SNATCHING = 7
+    ERROR = 8
+    RESTARTING = 9
+    STOPPED = 10
+
+class DRIVER(Enum): #驱动选择
+    CHROME = 0
+    EDGE = 1
+    FIREFOX = 2
+    IE = 3

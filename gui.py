@@ -13,17 +13,18 @@ import os
 import sys
 import time
 import shelve
+
 from PyQt5.uic import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+
+
+
 from options import *
-
-from PyQt5.QtCore import pyqtSignal, QObject
-
 from AutoElec import *
 from threading import Thread
 from thread_control import stop_thread
-
 
 PATH = os.path.dirname(__file__)
 
@@ -33,20 +34,22 @@ PATH = os.path.dirname(__file__)
 targets = []  # 选课目标
 user_id = ""  # 学号
 user_password = ""  # 密码
+driver_choice = DRIVER.CHROME #浏览器驱动选择（默认chrome）
 user_driver = ""  # 浏览器驱动地址
 #######choices######
 sound_reminder = SR.NONE  # 声音提醒
 email_reminder = False  # 邮件提醒
 login_method = LM.PORTAL  # 登录方式
 refresh_frequency = 2  # 刷新频率
-icr_permitted = False  # 启用验证码识别\
-icr_method = IM.CNN
+icr_permitted = False  # 启用验证码识别
+icr_method = IM.CNN  #识别方法
 
 
 class MySignal(QObject):
     '''前后端信号传递'''
     print_text = pyqtSignal(str)
     error_message = pyqtSignal(ERROR)
+    show_image = pyqtSignal(str)
 
 
 class Loginwindow(QWidget):
@@ -58,9 +61,10 @@ class Loginwindow(QWidget):
         self.infoinit()  # 初始化用户信息
         self.startbutton.clicked.connect(self.submit)
         self.checkBox_4.stateChanged.connect(self.password_change)
+        self.DriverChoice.buttonToggled.connect(self.driver_change)
 
     def infoinit(self):
-        global targets
+        global targets,user_driver,driver_choice
         try:
             with shelve.open(os.path.join(PATH, "qt/save/studentinfo")) as s:
                 self.lineEdit.setText(s['id'])
@@ -75,6 +79,12 @@ class Loginwindow(QWidget):
                 self.checkBox.setChecked(True)
         except:
             return
+        
+        driver_choice = DRIVER.CHROME
+        user_driver=os.path.join(PATH,'webdriver\chromedriver.exe')
+        self.lineEdit_3.setText(user_driver)
+        
+
     def closeEvent(self, event):
         """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主线程"""
         if not self.continued: sys.exit(0)
@@ -92,10 +102,9 @@ class Loginwindow(QWidget):
             except:
                 continue
         #获取用户信息
-        global user_id,user_password,user_driver
+        global user_id,user_password
         user_id =self.lineEdit.text()
         user_password =self.lineEdit_2.text()
-        user_driver =self.lineEdit_3.text()
 
         # 表单验证
         if len(user_id) != 10:
@@ -127,14 +136,16 @@ class Loginwindow(QWidget):
         elif '合适的时候' in self.comboBox.currentText():
             sound_reminder = SR.APPROPRIATE
 
+
+
         global login_method
         try:
-            if self.buttonGroup.checkedButton().text() == '选课网':
+            if self.LoginMethod.checkedButton().text() == '选课网':
                 login_method = LM.ELECTIVE
-            elif self.buttonGroup.checkedButton().text() == '门户':
+            elif self.LoginMethod.checkedButton().text() == '门户':
                 login_method = LM.PORTAL
         except:
-            login_method = LM.PORTAL
+            login_method = LM.ELECTIVE
 
         global email_reminder, icr_permitted
         if self.checkBox_2.isChecked():
@@ -173,6 +184,24 @@ class Loginwindow(QWidget):
         else:
             self.lineEdit_2.setEchoMode(QLineEdit.EchoMode(2))
 
+    def driver_change(self):
+        global driver_choice,user_driver
+
+        if self.DriverChoice.checkedButton().text() == 'Chrome':
+            driver_choice = DRIVER.CHROME
+            user_driver=os.path.join(PATH,'webdriver\chromedriver.exe')
+        elif self.DriverChoice.checkedButton().text() == 'Edge':
+            driver_choice = DRIVER.EDGE
+            user_driver=os.path.join(PATH,'webdriver\edgedriver.exe')
+        elif self.DriverChoice.checkedButton().text() == 'Firefox':
+            driver_choice = DRIVER.FIREFOX
+            user_driver=os.path.join(PATH,'webdriver\\firefoxdriver.exe')
+        elif self.DriverChoice.checkedButton().text() == 'IE':
+            driver_choice = DRIVER.IE
+            user_driver=os.path.join(PATH,'webdriver\iedriver.exe')
+        self.lineEdit_3.setText(user_driver)
+
+
     def saveinfo(self):
         with shelve.open(os.path.join(PATH, "qt/save/studentinfo")) as s:
             s['id'] = self.lineEdit.text()
@@ -190,13 +219,14 @@ class Mainwindow(QMainWindow):
 
         #初始化选课工具  
         self.ms = MySignal()#前后台信号传输
-        self.ET = Electool(self,targets,user_id,user_password,user_driver,sound_reminder,email_reminder,login_method,refresh_frequency,icr_permitted,icr_method,self.ms)
+        self.ET = Electool(self,targets,user_id,user_password,driver_choice,user_driver,sound_reminder,email_reminder,login_method,refresh_frequency,icr_permitted,icr_method,self.ms)
 
         #初始化界面
         self.infoinit()
         self.comboBox.currentIndexChanged.connect(self.change_method)
         self.ms.print_text.connect(self.printinfo)
         self.ms.error_message.connect(self.error_handler)
+        self.ms.show_image.connect(self.show_image)
         self.restartbutton.clicked.connect(self.restart)
         self.stopbutton.clicked.connect(self.stop)
 
@@ -217,6 +247,10 @@ class Mainwindow(QMainWindow):
         """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主线程"""
         reply = QMessageBox.question(self, 'EXIT', '确认退出吗？', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
+            try:
+                self.terminate_thread()
+            except:
+                pass
             sys.exit(0)
         else:
             event.ignore()
@@ -231,21 +265,20 @@ class Mainwindow(QMainWindow):
             item.setText(target)
             self.etable.setItem(i, 0, item)
         
-        self.statelabel.setText("正在启动...")
-        self.frequencylabel.setText(f"{round(self.ET.refresh_speed,3)}s  (+{refresh_frequency}s)")
         self.ET.state=STATE.LOADING
 
 
     def change_method(self):
         global icr_method
         if self.comboBox.currentText() == "cnn method":
-            icr_method = IM.TESSERACT
-            self.piclabel.setPixmap(
-                QPixmap(os.path.join(PATH, "qt/pics/PyTorch-logo.jpg")))
-        elif self.comboBox.currentText() == "tesseract-OCR":
             icr_method = IM.CNN
-            self.piclabel.setPixmap(
-                QPixmap(os.path.join(PATH, "qt/pics/ocr.jpg")))
+            self.ET.icr_method=IM.CNN
+            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/PyTorch-logo.jpg")))
+        elif self.comboBox.currentText() == "tesseract-OCR":
+            icr_method = IM.TESSERACT
+            self.ET.icr_method=IM.TESSERACT
+            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/ocr.jpg")))
+
 
     def printinfo(self, text):
         '''在文本输出框打印当前线程'''
@@ -255,39 +288,48 @@ class Mainwindow(QMainWindow):
 
     def error_handler(self,e):
         '''错误处理'''
-        self.ET.state=STATE.ERROR
-
+            
         if e==ERROR.EMAIL_ERROR:
-            msg_box = QMessageBox(QMessageBox.Warning, '错误', '邮箱信息错误或不完整！已关闭邮件提醒功能。')
+            msg_box = QMessageBox(QMessageBox.Warning, '警告', '邮箱信息错误或不完整！已关闭邮件提醒功能。')
             msg_box.exec_()
 
         elif e==ERROR.DRIVER_ERROR:
+            self.ET.state=STATE.ERROR
             msg_box = QMessageBox(QMessageBox.Warning, '错误', '浏览器驱动出错！请检查驱动地址。')
             msg_box.exec_()
             sys.exit(0)
 
         else:
-            self.pr("\n尝试重启进程...\n")
+            self.ET.state=STATE.ERROR
             self.restart_thread()
-
-
+    
+    def show_image(self,path):
+        '''显示验证码图片'''
+        self.codeimg.setPixmap(QPixmap(path))
 
     def window_refresh(self):
         '''窗口线程'''
         while(1):
             #时间栏
+            time.sleep(0.1)#2020.9.27 添加时间延迟，控制窗口刷新速率为10Hz，防止过于密集的刷新占用大量cpu计算力
+
             self.timelabel.setText(self.ET.gettime())
-            #速率栏
-            self.frequencylabel.setText(f"{round(self.ET.refresh_speed,3)}s  (+{refresh_frequency}s)")
+            if self.ET.state==STATE.REFRESHING:
+                #速率栏
+                self.frequencylabel.setText(f"{round(self.ET.refresh_speed,3)}s  (+{refresh_frequency}s)")
+                #次数统计栏
+                self.countlabel.setText(f"{self.ET.refresh_count}次")
+
 
             #状态栏
-            if self.ET.state==STATE.LOADING:self.statelabel.setText("加载中...")
+            if self.ET.state==STATE.LOADING:self.statelabel.setText("正在启动...")
             elif self.ET.state==STATE.INITIALIZING:self.statelabel.setText("初始化...")
             elif self.ET.state==STATE.CONNECTING:self.statelabel.setText("尝试连接...")
             elif self.ET.state==STATE.LOGINING:self.statelabel.setText("正在登录...")
             elif self.ET.state==STATE.JUMPING:self.statelabel.setText("正在跳转...")
+            elif self.ET.state==STATE.EXAMINING:self.statelabel.setText("初始化课程检索...")
             elif self.ET.state==STATE.REFRESHING:self.statelabel.setText("自动刷新监控中...")
-            elif self.ET.state==STATE.SNATCHING:self.statelabel.setText("正在抓取名额...")
+            elif self.ET.state==STATE.SNATCHING:self.statelabel.setText("正在自动抢课...")
             elif self.ET.state==STATE.ERROR:self.statelabel.setText("系统异常")
             elif self.ET.state==STATE.RESTARTING:self.statelabel.setText("正在尝试重启...")
             elif self.ET.state==STATE.STOPPED:self.statelabel.setText("系统中断")

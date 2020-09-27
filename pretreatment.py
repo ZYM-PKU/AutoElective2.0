@@ -2,20 +2,25 @@
 
 import os
 import glob
+import time
 import pytesseract
 import numpy as np
 import random
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+
+
 from PIL import Image
 from cnn import CNN
 from alive_progress import alive_bar
 from transfer import encode,decode
-
+from options import *
 
 
 PATH = os.path.dirname(__file__)
+
+
 target_path="c:/train/test"#待降噪目录
 save_path="c:/train/testset"#降噪目标目录
 sift_path="c:/train/grab"#过滤目录
@@ -24,7 +29,7 @@ test_path="c:/train/test"#提取目标目录
 
 
 
-choice='denoise'#运行模式
+choice='extract'#运行模式
 error_count=0#受损文件数
 extract_scale=3000#随机提取规模
 
@@ -34,20 +39,22 @@ extract_scale=3000#随机提取规模
 class ICR():
     '''Intelligent Character Recognition'''
 
-    def __init__(self,image_name,threshold=160,mode='bilinear'):
+    def __init__(self,threshold=160,mode='bilinear'):
         super(ICR, self).__init__()
         self.threshold=threshold#灰度阈值
-        self.image_name=image_name
         self.mode=mode
 
-    def toNumpy(self):
+    def toNumpy(self,image_name):
         table = []
         for i in range(256):
             if i < self.threshold:
                 table.append(0)
             else:
                 table.append(1)
-        image = Image.open(self.image_name).convert('L')#转化为灰度图
+        image = Image.open(image_name).convert('L')#转化为灰度图
+        if image.size !=(58,22):
+            image=image.resize((58,22),Image.ANTIALIAS)#调整图片大小
+        image.save(image_name)
         image = image.point(table,'1')#二值化
         image=np.array(image)
         return image
@@ -78,12 +85,6 @@ class ICR():
                                 if image_array[i+dh][j+dw]:count+=1
                     
                         if count>=6: image_array[i][j]=True#邻域去噪
-
-                        
-                        
-
-
-            
                     
                         
         for time in range(1):
@@ -140,10 +141,10 @@ class ICR():
 
         return image_array
 
-    def upsample(self,save=False):
-        image=Image.fromarray(self.denoising(self.toNumpy()))
+    def upsample(self,image_name,save=False):
+        image=Image.fromarray(self.denoising(self.toNumpy(image_name)))
 
-        up=nn.Upsample(scale_factor=2, mode=self.mode)#pytorch上采样方法
+        up=nn.Upsample(scale_factor=2, mode=self.mode,align_corners=False)#pytorch上采样方法
 
         toTensor = transforms.ToTensor()
         image=up(toTensor(image).unsqueeze(0))
@@ -151,27 +152,42 @@ class ICR():
         image = toPIL(image.squeeze(0))
 
         if save:
-            name=self.image_name.split('\\')[-1].split('.')[0]
+            name=image_name.split('\\')[-1].split('.')[0]
             image.save(save_path+'/'+name+'.jpg')
 
         return image
 
 
-    def toText(self):
+    def toText(self,image_name):
         '''ocr方式'''
-        content = pytesseract.image_to_string(self.upsample())   # 使用tesseractOCR解析图片
+        content = pytesseract.image_to_string(self.upsample(image_name=image_name))   # 使用tesseractOCR解析图片
         return content#返回字符串
 
 
-    def ToText(self):
+    def ToText(self,image_name):
         '''cnn方式'''
+
         toTensor = transforms.ToTensor()
-        image = toTensor(self.upsample()).unsqueeze(0)
+        image = toTensor(self.upsample(image_name=image_name)).unsqueeze(0)
         cnn=CNN(test=True).eval()
-        cnn.load_state_dict(torch.load(os.path.join(PATH,'model/newcnn10.pth'),map_location=torch.device('cpu')))
+        cnn.load_state_dict(torch.load(os.path.join(PATH,'model/newcnn10.pth'),map_location=torch.device('cpu')))#将模型加载到cpu上，降低单次前传时间开销
         content=decode(cnn(image))
         return content  # 返回字符串
 
+
+def recognize(path,method=IM.CNN):
+    '''图片识别函数   args=（图片绝对路径，识别方式）'''
+    
+    result=""
+
+    icr=ICR()#初始化识别模组
+    
+    if method==IM.CNN:
+        result=icr.ToText(path)#调用cnn识别方法将图片转换为字符串
+    elif method==IM.TESSERACT:
+        result=icr.toText(path)#调用ocr方法将图片转换为字符串
+    
+    return result
 
 
 
@@ -180,12 +196,12 @@ class ICR():
 def denoise():#图片预处理（降噪&上采样）
     global error_count
     paths = glob.glob(target_path+'/*.jpg')
+    icr=ICR()
     print('Start denoising...')
     with alive_bar(len(paths)) as bar:
         for path in paths:
             bar()
-            icr=ICR(path)
-            try:icr.upsample(save=True)
+            try:icr.upsample(path,save=True)
             except:
                 error_count+=1
                 os.remove(path)
@@ -193,20 +209,6 @@ def denoise():#图片预处理（降噪&上采样）
     print('Completed.')
     print(f"errors: {error_count}")
 
-def mark():#自动标注
-    paths = glob.glob(save_path+'/*.jpg')
-    print('Start marking...')
-    with alive_bar(len(paths)) as bar:
-        for path in paths:
-            bar()
-            image = Image.open(path)
-            name=pytesseract.image_to_string(image)
-            newpath=save_path+'/'+name+'.jpg'
-
-            try:os.rename(path,newpath)#重命名
-            except: os.remove(path)#重复文件删除
-
-    print('Completed.')
 
 
 def common(x):
@@ -236,11 +238,11 @@ def sift():#过滤器（错误图片处理）
             
     V_count=0
     print("Special character processing...")
+    icr=ICR(mode='nearest')
     with alive_bar(len(v_list)) as bar:
         for path in v_list:
             bar()
-            icr=ICR(path,mode='nearest')
-            content=icr.toText()
+            content=icr.toText(path)
             name=path.split('\\')[-1].split('.')[0]
             if 'V' in content : 
                 V_count+=1
@@ -264,6 +266,7 @@ def extract():#从训练集中随机提取构成验证集/测试集
     paths= glob.glob(train_path+'/*.jpg')
     with alive_bar(extract_scale) as bar:
         for _ in range(extract_scale):
+            bar()
             path=random.choice(paths)
             name=path.split('\\')[-1].split('.')[0]
             newpath=test_path+'/'+name+'.jpg'
@@ -277,6 +280,8 @@ def extract():#从训练集中随机提取构成验证集/测试集
 
 if __name__ == "__main__":
     if choice=='denoise':denoise()
-    elif choice=='mark':mark()
     elif choice=='sift':sift()
     elif choice=='extract':extract()
+
+
+

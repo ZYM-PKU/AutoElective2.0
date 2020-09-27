@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>980</width>
-    <height>683</height>
+    <width>1004</width>
+    <height>699</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Comic Sans MS</family>
+    <pointsize>10</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>AutoElective</string>
@@ -157,12 +163,12 @@
         <item row="3" column="0">
          <widget class="QLabel" name="label_7">
           <property name="text">
-           <string>当前验证码：</string>
+           <string>刷新总次数：</string>
           </property>
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QLabel" name="label_8">
+         <widget class="QLabel" name="countlabel">
           <property name="text">
            <string>N/A</string>
           </property>
@@ -171,12 +177,33 @@
         <item row="4" column="0">
          <widget class="QLabel" name="label_9">
           <property name="text">
-           <string>识别结果：</string>
+           <string>当前验证码：</string>
           </property>
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QLabel" name="label_10">
+         <widget class="QLabel" name="codeimg">
+          <property name="text">
+           <string>N/A</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>识别结果：</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="coderesult">
+          <property name="font">
+           <font>
+            <family>Arial Black</family>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
           <property name="text">
            <string>N/A</string>
           </property>
@@ -215,6 +242,12 @@
         </item>
         <item>
          <widget class="QComboBox" name="comboBox">
+          <property name="font">
+           <font>
+            <family>Comic Sans MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <item>
            <property name="text">
             <string>cnn method</string>
@@ -246,6 +279,8 @@
            <widget class="QPushButton" name="restartbutton">
             <property name="font">
              <font>
+              <family>Arial Black</family>
+              <pointsize>10</pointsize>
               <weight>75</weight>
               <bold>true</bold>
               <stylestrategy>PreferAntialias</stylestrategy>
@@ -260,6 +295,8 @@
            <widget class="QPushButton" name="stopbutton">
             <property name="font">
              <font>
+              <family>Arial Black</family>
+              <pointsize>10</pointsize>
               <weight>75</weight>
               <bold>true</bold>
               <stylestrategy>PreferAntialias</stylestrategy>
@@ -316,7 +353,26 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QTextBrowser" name="infobox"/>
+        <widget class="QTextBrowser" name="infobox">
+         <property name="font">
+          <font>
+           <family>Comic Sans MS</family>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::StrongFocus</enum>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">selection-color: rgb(85, 170, 255);</string>
+         </property>
+         <property name="sizeAdjustPolicy">
+          <enum>QAbstractScrollArea::AdjustIgnored</enum>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -328,7 +384,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>980</width>
+     <width>1004</width>
      <height>26</height>
     </rect>
    </property>
@@ -336,8 +392,6 @@
     <property name="title">
      <string>开始</string>
     </property>
-    <addaction name="actionkaishi"/>
-    <addaction name="actionstop"/>
    </widget>
    <widget class="QMenu" name="menu">
     <property name="title">

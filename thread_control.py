@@ -1,9 +1,10 @@
 #本文件用于线程控制实验
 
-import threading
+
 import time
 import inspect
 import ctypes
+import threading
  
  
 def _async_raise(tid, exctype):
