@@ -298,11 +298,11 @@ class Mainwindow(QMainWindow):
         if self.comboBox.currentText() == "cnn method":
             icr_method = IM.CNN
             self.ET.icr_method=IM.CNN
-            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/PyTorch-logo.jpg")))
+            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/cnn.png")))
         elif self.comboBox.currentText() == "tesseract-OCR":
             icr_method = IM.OCR
             self.ET.icr_method=IM.OCR
-            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/ocr.jpg")))
+            self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/ocr.png")))
 
 
     def printinfo(self, text):
