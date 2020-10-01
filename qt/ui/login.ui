@@ -350,7 +350,14 @@
            </row>
            <column>
             <property name="text">
-             <string>我的选课目标（按意愿排序）</string>
+             <string>课程名-班号（用&quot;/&quot;隔开）</string>
+            </property>
+            <property name="background">
+             <color>
+              <red>0</red>
+              <green>255</green>
+              <blue>255</blue>
+             </color>
             </property>
            </column>
            <item row="0" column="0">

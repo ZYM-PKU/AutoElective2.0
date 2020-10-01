@@ -21,7 +21,7 @@ from PyQt5.QtCore import *
 
 
 
-from options import *
+from constant import *
 from AutoElec import *
 from threading import Thread
 from thread_control import stop_thread
@@ -43,6 +43,9 @@ login_method = LM.PORTAL  # 登录方式
 refresh_frequency = 2  # 刷新频率
 icr_permitted = False  # 启用验证码识别
 icr_method = IM.CNN  #识别方法
+
+#激活码
+activition_keys=[]
 
 
 class MySignal(QObject):
@@ -73,22 +76,32 @@ class Loginwindow(QWidget):
                 targets = s['targets']
                 for i, target in enumerate(targets):
                     item = QTableWidgetItem()
-                    item.setText(target)
+                    text=target[0]+'-'
+                    for it in target[1]:
+                        text+=str(it)+'/'
+                    item.setText(text[:-1])
                     self.etable.setItem(i, 0, item)
             if self.lineEdit.text() and self.lineEdit_2.text() and self.lineEdit_3.text():
                 self.checkBox.setChecked(True)
         except:
-            return
-        
+            pass
         driver_choice = DRIVER.CHROME
         user_driver=os.path.join(PATH,'webdriver\chromedriver.exe')
         self.lineEdit_3.setText(user_driver)
+        
         
 
     def closeEvent(self, event):
         """重写窗口关闭相应方法，保证主窗口被人为关闭时自动停止所有线程，结束主线程"""
         if not self.continued: sys.exit(0)
 
+    def qualify(self):
+        '''身份验证函数'''
+        while True:
+            text, okPressed = QInputDialog.getText(self, "Activition Key:","输入激活密钥：", QLineEdit.Normal, "")
+            if okPressed and text != '':
+                if text in activition_keys:
+                    break
 
     def submit(self):
         # 获取选课信息
@@ -97,8 +110,17 @@ class Loginwindow(QWidget):
         for i in range(6):
             try:
                 target = self.etable.item(i, 0).text()
-                if target:
-                    targets.append(target)
+                target_item=target.split('-')
+                target_class=target_item[0].replace(' ','')
+                target_ids=[]
+                if len(target_item)>1:
+                    for it in target_item[1].split('/'):
+                        try:
+                            target_ids.append(int(it))
+                        except:
+                            continue
+                if target_class:
+                    targets.append([target_class,target_ids])
             except:
                 continue
         #获取用户信息
@@ -161,9 +183,6 @@ class Loginwindow(QWidget):
         refresh_frequency = self.spinBox.value()
 
 
-        
-
-
         # 保存信息
         if self.checkBox.isChecked():
             self.saveinfo()
@@ -171,6 +190,9 @@ class Loginwindow(QWidget):
             with shelve.open(os.path.join(PATH, "qt/save/studentinfo")) as s:
                 s['id'] = s['password'] = ""
                 s['targets'] = []
+
+        #身份验证
+        #self.qualify()
 
         # 窗口跳转
         self.mainwindow = Mainwindow()
@@ -262,7 +284,10 @@ class Mainwindow(QMainWindow):
         global targets
         for i, target in enumerate(targets):
             item = QTableWidgetItem()
-            item.setText(target)
+            text=target[0]+'-'
+            for it in target[1]:
+                text+=str(it)+'/'
+            item.setText(text[:-1])
             self.etable.setItem(i, 0, item)
         
         self.ET.state=STATE.LOADING
@@ -275,8 +300,8 @@ class Mainwindow(QMainWindow):
             self.ET.icr_method=IM.CNN
             self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/PyTorch-logo.jpg")))
         elif self.comboBox.currentText() == "tesseract-OCR":
-            icr_method = IM.TESSERACT
-            self.ET.icr_method=IM.TESSERACT
+            icr_method = IM.OCR
+            self.ET.icr_method=IM.OCR
             self.piclabel.setPixmap(QPixmap(os.path.join(PATH, "qt/pics/ocr.jpg")))
 
 
@@ -298,7 +323,11 @@ class Mainwindow(QMainWindow):
             msg_box = QMessageBox(QMessageBox.Warning, '错误', '浏览器驱动出错！请检查驱动地址。')
             msg_box.exec_()
             sys.exit(0)
-
+        elif e==ERROR.PASSWORD_ERROR:
+            self.ET.state=STATE.ERROR
+            msg_box = QMessageBox(QMessageBox.Warning, '错误', '学号或密码填写错误，请检查你的输入。')
+            msg_box.exec_()
+            sys.exit(0)
         else:
             self.ET.state=STATE.ERROR
             self.restart_thread()
@@ -381,7 +410,7 @@ class Mainwindow(QMainWindow):
 
 
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     app.setWindowIcon(QIcon(os.path.join(PATH, "qt/pics/peking.png")))

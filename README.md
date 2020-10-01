@@ -13,19 +13,22 @@
 
 # **警告！**
 
-* 请不要尝试在服务器访问高峰期（比如开放补选的3小时内）使用自动选课工具，否则可能引发未知的错误。
+* 请不要尝试在服务器访问高峰期（比如开放补选的3小时内）使用自动刷课工具，否则可能引发未知的错误。
 * 自动刷课工具运行过程中禁止更改选课计划。
-* 尽量不要在0附加刷新速率的模式下运行。
+* 尽量不要在0s附加刷新速率的模式下运行。
+* 选课目标分布在多个页面时会影响刷新速率。
+* 为了防止与开发者发生利益冲突，发行版的部分源代码做了加密处理，且抢课算法有适当延时。
 
-# 优势
+# 特点
 * 提供可视化界面，方便操作，可实时监控程序运行进程。
-* 验证码识别准确率较高（>92%）
-* 抢课速度较快 （<0.2s）
+* 支持多页抢课，只要指定课程与班号就可以进行刷课，不需要做额外配置。
+* 验证码CNN识别准确率较高（>92%）
+* 抢课速度较快 （开发版<0.2s，发行版<2.2s）
 
 # 使用方法
 
 ## 1.环境配置
-<font color=#DC143C>首先要保证shell运行在项目根目录下，且已经安装Chrome浏览器。</font>
+<font color=#DC143C>首先要保证shell运行在项目根目录下！</font>
 ### (1)安装[python3](https://www.python.org/)
 ### (2)安装[Pytorch](https://pytorch.org/)
 从 PyTorch 官网 中选择合适的条件获得下载命令，然后复制粘贴到命令行中运行即可下载安装。
@@ -33,11 +36,18 @@
 
 - `PyTorch Build`:  Stable (1.6.0)
 - `Your OS`: Windows
-- `Package`: Conda
+- `Package`: Pip
 - `Language`: Python
 - `CUDA`: None（有N卡的可以选择对应的CUDA版本）
-### (3)安装对应版本的[Chrome浏览器驱动](http://chromedriver.storage.googleapis.com/index.html)
-请在Chrome设置的关于Chrome中查询浏览器版本号。
+
+ps：[Pytorch下载缓慢的解决方案](https://blog.csdn.net/sinat_33896833/article/details/103252069)
+### (3)下载对应版本的浏览器驱动
+* [Chrome浏览器驱动](http://chromedriver.storage.googleapis.com/index.html)
+* [Edge浏览器驱动](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/)
+* [Firefox浏览器驱动](https://github.com/mozilla/geckodriver/releases)
+* [IE浏览器驱动](http://selenium-release.storage.googleapis.com/index.html)
+
+ps：请在浏览器设置的“关于”中查询浏览器版本号。
 ### (4)安装第三方依赖库
 ```
 pip install -r requirement.txt
@@ -47,17 +57,17 @@ pip install -r requirement.txt
 ## 2.运行程序
 输入指令：
 ```
-python gui.py
+python main.py
 ```
 该指令会打开一个初始化界面：
 ![img](./show/gui.png)
 
-按照界面提示填写学号与密码，并在浏览器驱动一栏中填入下载好的驱动地址（绝对路径）。然后在右侧按照意愿顺序填写课程名称并进行一些设置后点击“开始”即可自动刷课。
+&emsp;按照界面提示选择浏览器，填写学号与密码。确保对应浏览器驱动已经放在WebdriverPath显示的路径中，且文件名一致。然后在右侧按照格式要求填写目标课程名称与班号（可以不指定班号，程序会默认监控该课程的所有班），进行一些设置后点击“开始”即可自动刷课。
 
-### 注1：邮件提醒功能
+### 注：邮件提醒功能
 &emsp;如果想要在选课成功或者特定的一些时间收到程序的邮件通知，请在email.txt中完善个人邮件信息。
 
-&emsp;程序要自动发送邮件需要至少一个发件邮箱和一个收件邮箱（可以都是自己的邮箱，即自己给自己发邮件），且发件邮箱必须开启SMTP<sup id="a3">[3](#f3)</sup>功能，请自行在网上查阅如何开启邮箱SMTP并查看对应的授权码。以下是填写规范（email.txt）：
+&emsp;程序要自动发送邮件需要至少一个发件邮箱和一个收件邮箱（可以都是自己的邮箱，即自己给自己发邮件），且发件邮箱必须开启SMTP<sup id="a3">[3](#f3)</sup>功能。请自行在网上查阅如何开启邮箱SMTP并查看对应的授权码。以下是填写规范（email.txt）：
 * 第一行：邮箱服务器地址（例：qq邮箱对应smtp.qq.com）
 * 第二行：收件邮箱（自己的邮箱 例：***@qq.com）
 * 第三行：发件邮箱（可以是自己的邮箱）的smtp授权码
@@ -78,13 +88,14 @@ python gui.py
 ├── show            //图文材料
 ├── webdriver         //浏览器驱动
 ├── website            //官网源代码
-├── AutoElective.py         //主程序
+├── AutoElective.pyc         //主程序（已加密）
 ├── cnn.py         //定义卷积神经网络
 ├── constant.py         //定义常量
 ├── data_analyze.py          //模型分析
 ├── generate.py          //验证码生成器（已废弃）
-├── gui.py         //启动界面（项目入口）
+├── gui.py         //启动界面
 ├── LoginAttack.py            //自动标签数据集获取
+├── main.py          //入口文件（启动器）
 ├── options.py             //定义枚举
 ├── pretreatment.py           //图片预处理（降噪、二值化、上采样等）
 ├── test.py               //模型测试

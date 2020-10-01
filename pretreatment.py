@@ -15,10 +15,11 @@ from PIL import Image
 from cnn import CNN
 from alive_progress import alive_bar
 from transfer import encode,decode
-from options import *
+from constant import *
 
 
 PATH = os.path.dirname(__file__)
+model='model/newcnn10.pth'
 
 
 target_path="c:/train/test"#待降噪目录
@@ -161,6 +162,7 @@ class ICR():
     def toText(self,image_name):
         '''ocr方式'''
         content = pytesseract.image_to_string(self.upsample(image_name=image_name))   # 使用tesseractOCR解析图片
+        content=content.split('\n')[0]
         return content#返回字符串
 
 
@@ -170,7 +172,7 @@ class ICR():
         toTensor = transforms.ToTensor()
         image = toTensor(self.upsample(image_name=image_name)).unsqueeze(0)
         cnn=CNN(test=True).eval()
-        cnn.load_state_dict(torch.load(os.path.join(PATH,'model/newcnn10.pth'),map_location=torch.device('cpu')))#将模型加载到cpu上，降低单次前传时间开销
+        cnn.load_state_dict(torch.load(os.path.join(PATH,model),map_location=torch.device('cpu')))#将模型加载到cpu上，降低单次前传时间开销
         content=decode(cnn(image))
         return content  # 返回字符串
 
@@ -184,7 +186,7 @@ def recognize(path,method=IM.CNN):
     
     if method==IM.CNN:
         result=icr.ToText(path)#调用cnn识别方法将图片转换为字符串
-    elif method==IM.TESSERACT:
+    elif method==IM.OCR:
         result=icr.toText(path)#调用ocr方法将图片转换为字符串
     
     return result

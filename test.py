@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
-from options import *
+from constant import *
 from pretreatment import recognize
 from alive_progress import alive_bar
 
@@ -18,7 +18,7 @@ PATH = os.path.dirname(__file__)
 
 
 
-choice=IM.CNN#识别方式
+choice=IM.OCR#识别方式
 test_set='c:/train/test'#测试集
 
 

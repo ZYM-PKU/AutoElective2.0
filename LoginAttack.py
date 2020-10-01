@@ -14,7 +14,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select#选择框处理
 from selenium.webdriver.common.action_chains import ActionChains#精细动作
 
-from options import *
+from constant import *
 from pretreatment import recognize
 from alive_progress import alive_bar
 
