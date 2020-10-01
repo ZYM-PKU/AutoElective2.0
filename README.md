@@ -96,7 +96,6 @@ python main.py
 ├── gui.py         //启动界面
 ├── LoginAttack.py            //自动标签数据集获取
 ├── main.py          //入口文件（启动器）
-├── options.py             //定义枚举
 ├── pretreatment.py           //图片预处理（降噪、二值化、上采样等）
 ├── test.py               //模型测试
 ├── thread_control.py            //多线程处理
