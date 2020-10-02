@@ -30,7 +30,7 @@
 # 使用方法
 
 ## 一、程序小白的使用方法：
-&emsp;下载并运行安装包，查看说明操作即可。
+&emsp;下载并运行[安装包](https://github.com/ZYM-PKU/AutoElective2.0/releases/tag/v1.0.0)，查看说明操作即可。
 
 ## 二、程序员的使用方法：
 
