@@ -1,10 +1,7 @@
 #本文件定义验证码识别使用的卷积神经网络模型  
 
-
-import torch
-import torch.nn as nn
-import torchvision.models as models
 import constant
+import torch.nn as nn
 
 class CNN(nn.Module):
     def __init__(self,test=False):

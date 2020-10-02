@@ -5,9 +5,10 @@
 import os
 import glob
 import random
-import torch
-from alive_progress import alive_bar
 import torchvision.transforms as transforms
+
+from torch import ones,transpose,cat
+from alive_progress import alive_bar
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -69,7 +70,7 @@ def generate2():
         for i in range(3000):
             bar()
             mcount=0
-            edge=torch.ones(48,12)
+            edge=ones(48,12)
             toPIL = transforms.ToPILImage()
             chosen_characters=[]
             chosen_names=str()
@@ -79,15 +80,15 @@ def generate2():
                 name=names[choice]
                 if name=='m' or name=='M':
                     mcount+=1
-                    edge=torch.ones(48,12-mcount*2)
+                    edge=ones(48,12-mcount*2)
                 else:
-                    character=torch.transpose(character,0,1)
+                    character=transpose(character,0,1)
                     character=character[:][2:-2]
-                    character=torch.transpose(character,0,1)
+                    character=transpose(character,0,1)
                 chosen_characters.append(character)
                 chosen_names+=name
             
-            result=torch.cat([edge,chosen_characters[0],chosen_characters[1],chosen_characters[2],chosen_characters[3],edge],dim=1)
+            result=cat([edge,chosen_characters[0],chosen_characters[1],chosen_characters[2],chosen_characters[3],edge],dim=1)
             result = toPIL(result)
 
             result.save(os.path.join(PATH,'res1/'+chosen_names+'.jpg'))

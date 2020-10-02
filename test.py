@@ -3,11 +3,7 @@
 import os
 import time
 import glob
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
-import torchvision.transforms as transforms
+
 
 from constant import *
 from pretreatment import recognize

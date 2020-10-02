@@ -3,11 +3,9 @@
 import os
 import time
 import glob
-import torch
 import shelve
 import numpy as np
 import torch.nn as nn
-import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
@@ -16,7 +14,7 @@ from PIL import Image
 from cnn import CNN
 from transfer import encode,decode
 from alive_progress import alive_bar
-
+from torch import device,cuda,optim,save
 
 
 train_dir="c:/train/trainset"#训练集
@@ -29,7 +27,7 @@ n_threads=16#处理线程数
 
 PATH = os.path.dirname(__file__)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")#训练设备
+device = device("cuda" if cuda.is_available() else "cpu")#训练设备
 
 
 def RecurrentSample(n):
@@ -101,7 +99,7 @@ def train(dataloader):
     cnn.apply(weights_init)
 
     criterion = nn.MultiLabelSoftMarginLoss()
-    optimizer = torch.optim.AdamW(cnn.parameters(), lr=learning_rate)
+    optimizer = optim.AdamW(cnn.parameters(), lr=learning_rate)
 
     losslog=open(os.path.join(PATH,'loss/loss.txt'),'a')#存储损失
     loss_list=[]
@@ -128,7 +126,7 @@ def train(dataloader):
             optimizer.step()
 
 
-    torch.save(cnn.state_dict(), os.path.join(PATH,save_dir))
+    save(cnn.state_dict(), os.path.join(PATH,save_dir))
     losslog.close()
     with shelve.open(os.path.join(PATH,"loss/lossdata")) as d:
         d['loss']=loss_list

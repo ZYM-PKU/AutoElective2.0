@@ -1,4 +1,4 @@
-#入口文件
+# 入口文件
 from gui import main
 
 if __name__ == "__main__":

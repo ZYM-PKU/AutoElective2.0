@@ -1,10 +1,11 @@
 #本文件定义字符串与其对应向量的转换方法
 
-import torch
+
 import constant
+from torch import zeros,float64
 
 def encode(text):
-    vector = torch.zeros(constant.Cnum*constant.Total_num,dtype=torch.float64)
+    vector = zeros(constant.Cnum*constant.Total_num,dtype=float64)
 
     def char2pos(c):#找到某个字符对应的分量位置
         

@@ -9,11 +9,6 @@ import selenium
 
 
 from selenium.webdriver import Chrome
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select#选择框处理
-from selenium.webdriver.common.action_chains import ActionChains#精细动作
-
 from constant import *
 from pretreatment import recognize
 from alive_progress import alive_bar

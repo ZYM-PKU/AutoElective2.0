@@ -3,19 +3,19 @@
 import os
 import glob
 import time
-import pytesseract
-import numpy as np
 import random
-import torch
+import pytesseract
 import torch.nn as nn
 import torchvision.transforms as transforms
 
 
 from PIL import Image
 from cnn import CNN
+from constant import *
+from numpy import array
 from alive_progress import alive_bar
 from transfer import encode,decode
-from constant import *
+from torch import from_numpy,load,device
 
 
 PATH = os.path.dirname(__file__)
@@ -57,7 +57,7 @@ class ICR():
             image=image.resize((58,22),Image.ANTIALIAS)#调整图片大小
         image.save(image_name)
         image = image.point(table,'1')#二值化
-        image=np.array(image)
+        image=array(image)
         return image
 
     def denoising(self,image_array):
@@ -65,7 +65,7 @@ class ICR():
         h,w=image_array.shape
 
         padding=nn.ConstantPad2d(padding=(1, 1, 1, 1),value=1)
-        image_array=(padding(torch.from_numpy(image_array))).numpy()
+        image_array=(padding(from_numpy(image_array))).numpy()
 
         for time in range(1):
             for i in range(1,h+1):
@@ -172,7 +172,7 @@ class ICR():
         toTensor = transforms.ToTensor()
         image = toTensor(self.upsample(image_name=image_name)).unsqueeze(0)
         cnn=CNN(test=True).eval()
-        cnn.load_state_dict(torch.load(os.path.join(PATH,model),map_location=torch.device('cpu')))#将模型加载到cpu上，降低单次前传时间开销
+        cnn.load_state_dict(load(os.path.join(PATH,model),map_location=device('cpu')))#将模型加载到cpu上，降低单次前传时间开销
         content=decode(cnn(image))
         return content  # 返回字符串
 
