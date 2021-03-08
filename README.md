@@ -1,3 +1,6 @@
+#///选课网最近变得更毒了，正在以毒攻毒中。。。
+
+
 # AutoElective2.0
 
 <font color=#999AAA >基于Web自动化测试与卷积神经网络自主开发的可视化选课应用
@@ -5,6 +8,8 @@
 
 <font color=#999AAA >Self-developed Visual Course Selection Application Based on Web Automated Testing and Convolutional Neural Networks
 </font>
+
+
 
  
 
